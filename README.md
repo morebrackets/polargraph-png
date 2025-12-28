@@ -5,7 +5,9 @@ Convert images to Polargraph SVG format optimized for pen plotters and drawing m
 ## Features
 
 - Converts any image format to grayscale
-- Generates continuous horizontal SVG paths (rows)
+- Generates segmented horizontal SVG paths (rows) only where content exists
+- **Skips white/light background areas** - only draws lines for main image content
+- Lines are broken into segments rather than continuous end-to-end strokes
 - Modulates amplitude and frequency of lines based on pixel darkness
 - **Automatic collision detection and prevention** - ensures lines never overlap or touch
 - Clean, connected `<polyline>` elements optimized for pen plotter G-code conversion
@@ -61,17 +63,27 @@ python polargraph_converter.py input.jpg -o output.svg --line-spacing 3 --amplit
 1. **Grayscale Conversion**: Input image is converted to grayscale
 2. **Row Processing**: Image is processed row by row at specified line spacing
 3. **Darkness Analysis**: Each pixel's darkness is calculated (0=white, 1=black)
-4. **Wave Generation**: For each horizontal line:
+4. **Background Filtering**: Pixels lighter than threshold (~230 gray value) are skipped
+5. **Line Segmentation**: Lines are broken into segments where content exists (not continuous end-to-end)
+6. **Wave Generation**: For each segment:
    - Amplitude is modulated by pixel darkness (darker = larger waves)
    - Frequency is modulated by pixel darkness (darker = more waves)
-5. **Collision Detection**: Automatically checks if adjacent lines would overlap
-6. **Collision Prevention**: Lines that would touch are adjusted to maintain minimum clearance (0.8 pixels)
-7. **SVG Output**: Continuous polyline elements are generated for optimal plotter performance
+7. **Collision Detection**: Automatically checks if adjacent line segments would overlap
+8. **Collision Prevention**: Segments that would touch are adjusted to maintain minimum clearance (0.8 pixels)
+9. **SVG Output**: Segmented polyline elements are generated for optimal plotter performance
+
+### Background Skipping
+
+The converter intelligently skips white/light background areas:
+- Only draws lines where pixel darkness exceeds 0.1 threshold (roughly pixels darker than 230 gray)
+- Creates separate line segments for each content region
+- Minimizes unnecessary pen movement over blank areas
+- Reduces file size and plotting time
 
 ### Collision Prevention
 
-The tool automatically detects when horizontal lines would overlap or touch due to high wave amplitudes. When a collision is detected:
-- The affected line is adjusted downward to maintain minimum clearance
+The tool automatically detects when horizontal line segments would overlap or touch due to high wave amplitudes. When a collision is detected:
+- The affected segment is adjusted downward to maintain minimum clearance
 - A message is displayed showing how many lines were adjusted
 - This ensures clean pen plotter output without overlapping strokes
 
@@ -83,7 +95,8 @@ Collision prevention: 23/34 lines adjusted for clearance
 ## SVG Output
 
 The generated SVG contains:
-- Clean `<polyline>` elements, one per horizontal row
+- Clean `<polyline>` elements, multiple per horizontal row (segmented)
+- Lines only where content exists (skips white background)
 - No overlapping paths
 - Optimized for pen plotter G-code conversion
 - Stroke width set to 0.5 for precision drawing

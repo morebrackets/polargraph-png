@@ -42,9 +42,10 @@ def get_pixel_darkness(gray_value):
     return 1.0 - (gray_value / 255.0)
 
 
-def generate_wave_line(y, width, darkness_values, line_spacing, amplitude_scale):
+def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitude_scale, darkness_threshold=0.1):
     """
-    Generate a wavy horizontal line based on pixel darkness values.
+    Generate wavy horizontal line segments based on pixel darkness values.
+    Only creates line segments where darkness exceeds threshold (skips white background).
     
     Args:
         y: Y coordinate of the line
@@ -52,14 +53,24 @@ def generate_wave_line(y, width, darkness_values, line_spacing, amplitude_scale)
         darkness_values: List of darkness values for each x position
         line_spacing: Vertical spacing between lines
         amplitude_scale: Scaling factor for wave amplitude
+        darkness_threshold: Minimum darkness to draw a line (0.1 = skip pixels lighter than ~230 gray)
         
     Returns:
-        List of (x, y) coordinate tuples for the polyline
+        List of line segments, where each segment is a list of (x, y) coordinate tuples
     """
-    points = []
+    segments = []
+    current_segment = []
     
     for x in range(width):
         darkness = darkness_values[x]
+        
+        # Skip white/light background areas
+        if darkness < darkness_threshold:
+            # End current segment if we have one
+            if current_segment:
+                segments.append(current_segment)
+                current_segment = []
+            continue
         
         # Modulate amplitude based on darkness
         # Darker pixels create larger wave amplitudes
@@ -76,69 +87,93 @@ def generate_wave_line(y, width, darkness_values, line_spacing, amplitude_scale)
         # Calculate final y position
         final_y = y + wave_offset
         
-        points.append((x, final_y))
+        current_segment.append((x, final_y))
     
-    return points
+    # Don't forget the last segment
+    if current_segment:
+        segments.append(current_segment)
+    
+    return segments
 
 
-def check_line_collision(prev_line_points, curr_line_points, min_clearance=1.0):
+def check_segment_collision(prev_segments, curr_segments, min_clearance=1.0):
     """
-    Check if two consecutive lines are too close or touching.
+    Check if any segments from two consecutive lines are too close or touching.
     
     Args:
-        prev_line_points: List of (x, y) points from previous line
-        curr_line_points: List of (x, y) points from current line
+        prev_segments: List of line segments from previous line
+        curr_segments: List of line segments from current line
         min_clearance: Minimum required distance between lines
         
     Returns:
         Tuple of (has_collision, min_distance_found)
     """
-    if not prev_line_points:
+    if not prev_segments or not curr_segments:
         return False, float('inf')
     
     min_distance = float('inf')
     
-    # Check vertical distance at each x position
-    for i in range(min(len(prev_line_points), len(curr_line_points))):
-        prev_y = prev_line_points[i][1]
-        curr_y = curr_line_points[i][1]
-        distance = abs(curr_y - prev_y)
-        min_distance = min(min_distance, distance)
+    # Check each current segment against all previous segments
+    for curr_segment in curr_segments:
+        for prev_segment in prev_segments:
+            # Check overlapping x ranges
+            curr_x_min = curr_segment[0][0]
+            curr_x_max = curr_segment[-1][0]
+            prev_x_min = prev_segment[0][0]
+            prev_x_max = prev_segment[-1][0]
+            
+            # Check if segments overlap in x dimension
+            if curr_x_max >= prev_x_min and curr_x_min <= prev_x_max:
+                # Check vertical distance at overlapping points
+                for curr_x, curr_y in curr_segment:
+                    # Find corresponding point in prev_segment
+                    for prev_x, prev_y in prev_segment:
+                        if abs(curr_x - prev_x) < 1:  # Same x position (within 1 pixel)
+                            distance = abs(curr_y - prev_y)
+                            min_distance = min(min_distance, distance)
     
     has_collision = min_distance < min_clearance
     return has_collision, min_distance
 
 
-def adjust_line_for_clearance(curr_line_points, prev_line_points, min_clearance=1.0):
+def adjust_segments_for_clearance(curr_segments, prev_segments, min_clearance=1.0):
     """
-    Adjust current line points to maintain minimum clearance from previous line.
+    Adjust current line segments to maintain minimum clearance from previous line segments.
     
     Args:
-        curr_line_points: List of (x, y) points from current line to adjust
-        prev_line_points: List of (x, y) points from previous line
+        curr_segments: List of line segments from current line to adjust
+        prev_segments: List of line segments from previous line
         min_clearance: Minimum required distance between lines
         
     Returns:
-        Adjusted list of (x, y) points
+        Adjusted list of line segments
     """
-    if not prev_line_points:
-        return curr_line_points
+    if not prev_segments:
+        return curr_segments
     
-    adjusted_points = []
+    adjusted_segments = []
     
-    for i in range(len(curr_line_points)):
-        x, y = curr_line_points[i]
+    for curr_segment in curr_segments:
+        adjusted_segment = []
         
-        if i < len(prev_line_points):
-            prev_y = prev_line_points[i][1]
+        for x, y in curr_segment:
+            adjusted_y = y
             
-            # Ensure current line stays below previous line with minimum clearance
-            if y < prev_y + min_clearance:
-                y = prev_y + min_clearance
+            # Check against all previous segments
+            for prev_segment in prev_segments:
+                # Find closest point in previous segment at similar x
+                for prev_x, prev_y in prev_segment:
+                    if abs(x - prev_x) < 1:  # Same x position
+                        # Ensure current point stays below previous with minimum clearance
+                        if adjusted_y < prev_y + min_clearance:
+                            adjusted_y = prev_y + min_clearance
+                        break
+            
+            adjusted_segment.append((x, adjusted_y))
         
-        adjusted_points.append((x, y))
+        adjusted_segments.append(adjusted_segment)
     
-    return adjusted_points
+    return adjusted_segments
 
 
 def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=None):
@@ -169,8 +204,8 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=
         '  <g fill="none" stroke="black" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">'
     ]
     
-    # Track previous line for collision detection
-    prev_line_points = None
+    # Track previous line segments for collision detection
+    prev_line_segments = None
     collision_count = 0
     total_lines = 0
     
@@ -188,23 +223,30 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=
             darkness = get_pixel_darkness(pixel_value)
             darkness_values.append(darkness)
         
-        # Generate wavy line based on darkness
-        points = generate_wave_line(y, width, darkness_values, line_spacing, amplitude_scale)
+        # Generate wavy line segments based on darkness (skips white background)
+        segments = generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitude_scale)
+        
+        # Skip this row if no segments were generated (all white)
+        if not segments:
+            y += line_spacing
+            continue
         
         # Check for collision with previous line and adjust if needed
         min_clearance = 0.8  # Minimum spacing to prevent pen overlap
-        if prev_line_points:
-            has_collision, min_dist = check_line_collision(prev_line_points, points, min_clearance)
+        if prev_line_segments:
+            has_collision, min_dist = check_segment_collision(prev_line_segments, segments, min_clearance)
             if has_collision:
                 collision_count += 1
-                points = adjust_line_for_clearance(points, prev_line_points, min_clearance)
+                segments = adjust_segments_for_clearance(segments, prev_line_segments, min_clearance)
         
-        # Create SVG polyline element
-        points_str = ' '.join([f'{x:.2f},{y:.2f}' for x, y in points])
-        svg_lines.append(f'    <polyline points="{points_str}"/>')
+        # Create SVG polyline elements for each segment
+        for segment in segments:
+            if len(segment) >= 2:  # Only draw if segment has at least 2 points
+                points_str = ' '.join([f'{x:.2f},{y:.2f}' for x, y in segment])
+                svg_lines.append(f'    <polyline points="{points_str}"/>')
         
-        # Store current line for next iteration
-        prev_line_points = points
+        # Store current segments for next iteration
+        prev_line_segments = segments
         
         # Move to next line
         y += line_spacing
