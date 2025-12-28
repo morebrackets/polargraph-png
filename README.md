@@ -45,6 +45,7 @@ python polargraph_converter.py input.jpg -o output.svg --line-spacing 7 --amplit
 - `-l, --line-spacing` - Vertical spacing between horizontal lines in pixels (default: 5.0)
 - `-a, --amplitude-scale` - Scaling factor for wave amplitude (default: 10.0)
 - `--organic` - Enable organic/hand-drawn style with randomness and easing (optional flag)
+- `--frequency-only` - Modulate only frequency (not amplitude) based on pixel darkness (optional flag)
 
 ### Parameters Guide
 
@@ -67,6 +68,15 @@ python polargraph_converter.py input.jpg -o output.svg --line-spacing 7 --amplit
 - Applies easing for more natural, organic transitions
 - Use for artistic, less mechanical-looking outputs
 - Disabled by default for precision plotting
+
+**Frequency-Only Mode (`--frequency-only`)**
+- Modulates only wave frequency based on pixel darkness (not amplitude)
+- By default, both amplitude and frequency vary with darkness
+- With this option, amplitude stays constant while frequency varies
+- Darker areas have more waves (higher frequency) but same wave height
+- Lighter areas have fewer waves (lower frequency) but same wave height
+- Creates a more uniform wave pattern with density variations
+- Useful for achieving a consistent visual texture while preserving tonal information
 
 ## How It Works
 
@@ -127,6 +137,11 @@ python polargraph_converter.py landscape.png -o landscape.svg -l 8 -a 20
 Create an organic, hand-drawn style output:
 ```bash
 python polargraph_converter.py sketch.png -o sketch.svg -l 5 -a 15 --organic
+```
+
+Create output with frequency modulation only (constant amplitude):
+```bash
+python polargraph_converter.py image.png -o image.svg -l 5 -a 15 --frequency-only
 ```
 
 This will generate several example SVGs showing different parameter combinations and the collision prevention system in action.

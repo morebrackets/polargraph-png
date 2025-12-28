@@ -44,7 +44,7 @@ def get_pixel_darkness(gray_value):
 
 
 def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitude_scale, 
-                                darkness_threshold=0.1, organic=False, random_seed=None):
+                                darkness_threshold=0.1, organic=False, random_seed=None, frequency_only=False):
     """
     Generate wavy horizontal line segments based on pixel darkness values.
     Only creates line segments where darkness exceeds threshold (skips white background).
@@ -58,6 +58,7 @@ def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitu
         darkness_threshold: Minimum darkness to draw a line (0.1 = skip pixels lighter than ~230 gray)
         organic: If True, adds randomness and easing for hand-drawn look
         random_seed: Optional seed for reproducible randomness (used with y coordinate)
+        frequency_only: If True, modulates only frequency (not amplitude) based on darkness
         
     Returns:
         List of line segments, where each segment is a list of (x, y) coordinate tuples
@@ -84,14 +85,18 @@ def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitu
                 current_segment = []
             continue
         
-        # Modulate amplitude based on darkness
-        # Darker pixels create larger wave amplitudes
-        amplitude = darkness * amplitude_scale
-        
-        # Create wave with frequency modulation
-        # Darker areas have higher frequency (more waves)
+        # Modulate amplitude and/or frequency based on darkness
+        # Frequency modulation (both modes)
         base_frequency = 0.1
         frequency = base_frequency + (darkness * 0.2)
+        
+        # Amplitude modulation
+        if frequency_only:
+            # Use constant amplitude
+            amplitude = amplitude_scale
+        else:
+            # Default: modulate amplitude based on darkness
+            amplitude = darkness * amplitude_scale
         
         # Apply organic frequency variation
         if organic:
@@ -203,7 +208,7 @@ def adjust_segments_for_clearance(curr_segments, prev_segments, min_clearance=1.
     return adjusted_segments
 
 
-def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, organic=False, output_path=None):
+def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, organic=False, frequency_only=False, output_path=None):
     """
     Generate SVG from grayscale image with segmented horizontal paths.
     Only generates lines where content exists (skips white/light background).
@@ -214,6 +219,7 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, organic=Fals
         line_spacing: Vertical spacing between horizontal lines
         amplitude_scale: Scaling factor for wave amplitude
         organic: If True, adds randomness and easing for hand-drawn look
+        frequency_only: If True, modulates only frequency (not amplitude) based on darkness
         output_path: Path to save the SVG file (optional)
         
     Returns:
@@ -257,7 +263,8 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, organic=Fals
         
         # Generate wavy line segments based on darkness (skips white background)
         segments = generate_wave_line_segments(y, width, darkness_values, line_spacing, 
-                                              amplitude_scale, organic=organic, random_seed=random_seed)
+                                              amplitude_scale, organic=organic, random_seed=random_seed,
+                                              frequency_only=frequency_only)
         
         # Skip this row if no segments were generated (all white)
         if not segments:
@@ -353,6 +360,12 @@ Examples:
         help='Enable organic/hand-drawn style with randomness and easing'
     )
     
+    parser.add_argument(
+        '--frequency-only',
+        action='store_true',
+        help='Modulate only frequency (not amplitude) based on pixel darkness'
+    )
+    
     args = parser.parse_args()
     
     # Validate input file exists
@@ -378,6 +391,8 @@ Examples:
     print(f"Amplitude scale: {args.amplitude_scale}")
     if args.organic:
         print("Organic mode: ENABLED (hand-drawn style with randomness)")
+    if args.frequency_only:
+        print("Frequency-only mode: ENABLED (constant amplitude, varying frequency)")
     
     print("Generating SVG...")
     generate_svg(
@@ -385,6 +400,7 @@ Examples:
         line_spacing=args.line_spacing,
         amplitude_scale=args.amplitude_scale,
         organic=args.organic,
+        frequency_only=args.frequency_only,
         output_path=args.output
     )
     
