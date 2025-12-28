@@ -101,6 +101,13 @@ Create a quick sketch with bold waves:
 python polargraph_converter.py landscape.png -o landscape.svg -l 8 -a 20
 ```
 
+Run the demo script to see various output styles:
+```bash
+python demo.py
+```
+
+This will generate several example SVGs showing different parameter combinations and the collision prevention system in action.
+
 ## License
 
 MIT License

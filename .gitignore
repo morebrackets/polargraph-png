@@ -2,6 +2,10 @@
 test_*.png
 test_*.svg
 
+# Demo files
+demo.png
+demo_*.svg
+
 # Example outputs (keep source PNGs, ignore generated SVGs if desired)
 # examples/*.svg
 
