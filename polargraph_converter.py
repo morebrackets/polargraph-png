@@ -86,19 +86,17 @@ def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitu
             continue
         
         # Modulate amplitude and/or frequency based on darkness
+        # Frequency modulation (both modes)
+        base_frequency = 0.1
+        frequency = base_frequency + (darkness * 0.2)
+        
+        # Amplitude modulation
         if frequency_only:
-            # Use constant amplitude, modulate only frequency
+            # Use constant amplitude
             amplitude = amplitude_scale
-            base_frequency = 0.1
-            frequency = base_frequency + (darkness * 0.2)
         else:
-            # Default: modulate both amplitude and frequency
-            # Darker pixels create larger wave amplitudes
+            # Default: modulate amplitude based on darkness
             amplitude = darkness * amplitude_scale
-            
-            # Darker areas have higher frequency (more waves)
-            base_frequency = 0.1
-            frequency = base_frequency + (darkness * 0.2)
         
         # Apply organic frequency variation
         if organic:
