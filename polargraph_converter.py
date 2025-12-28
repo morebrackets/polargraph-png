@@ -6,6 +6,7 @@ Converts images to SVG format optimized for pen plotter/Polargraph drawing.
 
 import argparse
 import math
+import random
 import sys
 from pathlib import Path
 from PIL import Image
@@ -42,7 +43,8 @@ def get_pixel_darkness(gray_value):
     return 1.0 - (gray_value / 255.0)
 
 
-def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitude_scale, darkness_threshold=0.1):
+def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitude_scale, 
+                                darkness_threshold=0.1, organic=False, random_seed=None):
     """
     Generate wavy horizontal line segments based on pixel darkness values.
     Only creates line segments where darkness exceeds threshold (skips white background).
@@ -54,12 +56,22 @@ def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitu
         line_spacing: Vertical spacing between lines
         amplitude_scale: Scaling factor for wave amplitude
         darkness_threshold: Minimum darkness to draw a line (0.1 = skip pixels lighter than ~230 gray)
+        organic: If True, adds randomness and easing for hand-drawn look
+        random_seed: Optional seed for reproducible randomness (used with y coordinate)
         
     Returns:
         List of line segments, where each segment is a list of (x, y) coordinate tuples
     """
     segments = []
     current_segment = []
+    
+    # Set random seed based on y position for consistent but varied results
+    if organic and random_seed is not None:
+        random.seed(random_seed + int(y * 1000))
+    
+    # Generate organic variation parameters for this line
+    organic_phase_offset = random.uniform(0, 2 * math.pi) if organic else 0
+    organic_freq_variation = random.uniform(0.8, 1.2) if organic else 1.0
     
     for x in range(width):
         darkness = darkness_values[x]
@@ -81,8 +93,23 @@ def generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitu
         base_frequency = 0.1
         frequency = base_frequency + (darkness * 0.2)
         
+        # Apply organic frequency variation
+        if organic:
+            frequency *= organic_freq_variation
+        
         # Calculate wave offset
-        wave_offset = amplitude * math.sin(x * frequency)
+        wave_offset = amplitude * math.sin(x * frequency + organic_phase_offset)
+        
+        # Add organic randomness to y position
+        if organic:
+            # Add subtle random wobble (max 0.5 pixels)
+            random_wobble = random.uniform(-0.5, 0.5) * darkness
+            wave_offset += random_wobble
+            
+            # Add easing for smoother, more natural transitions
+            # Use a subtle ease-in-out based on position in the wave cycle
+            ease_factor = (math.sin(x * frequency * 2) * 0.3 + 1.0)
+            wave_offset *= ease_factor
         
         # Calculate final y position
         final_y = y + wave_offset
@@ -176,7 +203,7 @@ def adjust_segments_for_clearance(curr_segments, prev_segments, min_clearance=1.
     return adjusted_segments
 
 
-def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=None):
+def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, organic=False, output_path=None):
     """
     Generate SVG from grayscale image with segmented horizontal paths.
     Only generates lines where content exists (skips white/light background).
@@ -186,6 +213,7 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=
         grayscale_img: PIL Image in grayscale mode
         line_spacing: Vertical spacing between horizontal lines
         amplitude_scale: Scaling factor for wave amplitude
+        organic: If True, adds randomness and easing for hand-drawn look
         output_path: Path to save the SVG file (optional)
         
     Returns:
@@ -197,11 +225,14 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=
     svg_width = width
     svg_height = height
     
+    # Random seed for organic mode (use consistent seed for reproducible results)
+    random_seed = 42 if organic else None
+    
     # Start SVG content
     svg_lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_width}" height="{svg_height}" viewBox="0 0 {svg_width} {svg_height}">',
-        '  <desc>Polargraph SVG - Generated from image with collision prevention</desc>',
+        f'  <desc>Polargraph SVG - Generated from image{"with organic style" if organic else " with collision prevention"}</desc>',
         '  <g fill="none" stroke="black" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">'
     ]
     
@@ -225,7 +256,8 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=
             darkness_values.append(darkness)
         
         # Generate wavy line segments based on darkness (skips white background)
-        segments = generate_wave_line_segments(y, width, darkness_values, line_spacing, amplitude_scale)
+        segments = generate_wave_line_segments(y, width, darkness_values, line_spacing, 
+                                              amplitude_scale, organic=organic, random_seed=random_seed)
         
         # Skip this row if no segments were generated (all white)
         if not segments:
@@ -315,6 +347,12 @@ Examples:
         help='Scaling factor for wave amplitude (default: 10.0)'
     )
     
+    parser.add_argument(
+        '--organic',
+        action='store_true',
+        help='Enable organic/hand-drawn style with randomness and easing'
+    )
+    
     args = parser.parse_args()
     
     # Validate input file exists
@@ -338,12 +376,15 @@ Examples:
     print(f"Image size: {grayscale_img.size[0]}x{grayscale_img.size[1]}")
     print(f"Line spacing: {args.line_spacing}")
     print(f"Amplitude scale: {args.amplitude_scale}")
+    if args.organic:
+        print("Organic mode: ENABLED (hand-drawn style with randomness)")
     
     print("Generating SVG...")
     generate_svg(
         grayscale_img,
         line_spacing=args.line_spacing,
         amplitude_scale=args.amplitude_scale,
+        organic=args.organic,
         output_path=args.output
     )
     

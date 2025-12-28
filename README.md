@@ -9,6 +9,7 @@ Convert images to Polargraph SVG format optimized for pen plotters and drawing m
 - **Skips white/light background areas** - only draws lines for main image content
 - Lines are broken into segments rather than continuous end-to-end strokes
 - Modulates amplitude and frequency of lines based on pixel darkness
+- **Organic/hand-drawn mode** - adds randomness and easing for natural, sketch-like appearance
 - **Automatic collision detection and prevention** - ensures lines never overlap or touch
 - Clean, connected `<polyline>` elements optimized for pen plotter G-code conversion
 - Configurable line spacing and amplitude scaling
@@ -43,6 +44,7 @@ python polargraph_converter.py input.jpg -o output.svg --line-spacing 3 --amplit
 - `-o, --output` - Path to output SVG file (required)
 - `-l, --line-spacing` - Vertical spacing between horizontal lines in pixels (default: 5.0)
 - `-a, --amplitude-scale` - Scaling factor for wave amplitude (default: 10.0)
+- `--organic` - Enable organic/hand-drawn style with randomness and easing (optional flag)
 
 ### Parameters Guide
 
@@ -57,6 +59,14 @@ python polargraph_converter.py input.jpg -o output.svg --line-spacing 3 --amplit
 - Smaller values (5-10) = subtle waves, cleaner look
 - Larger values (15-25) = dramatic waves, more artistic
 - Recommended range: 8-20
+
+**Organic Mode (`--organic`)**
+- Adds randomness and easing to create hand-drawn, sketch-like appearance
+- Introduces subtle variations in wave frequency and amplitude
+- Adds small random wobbles to line positions
+- Applies easing for more natural, organic transitions
+- Use for artistic, less mechanical-looking outputs
+- Disabled by default for precision plotting
 
 ## How It Works
 
@@ -112,6 +122,11 @@ python polargraph_converter.py portrait.jpg -o portrait.svg -l 3 -a 12
 Create a quick sketch with bold waves:
 ```bash
 python polargraph_converter.py landscape.png -o landscape.svg -l 8 -a 20
+```
+
+Create an organic, hand-drawn style output:
+```bash
+python polargraph_converter.py sketch.png -o sketch.svg -l 5 -a 15 --organic
 ```
 
 Run the demo script to see various output styles:
