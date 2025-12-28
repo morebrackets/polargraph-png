@@ -35,7 +35,7 @@ python polargraph_converter.py input.png -o output.svg
 With custom parameters:
 
 ```bash
-python polargraph_converter.py input.jpg -o output.svg --line-spacing 3 --amplitude-scale 15
+python polargraph_converter.py input.jpg -o output.svg --line-spacing 7 --amplitude-scale 7
 ```
 
 ### Command Line Arguments
@@ -127,11 +127,6 @@ python polargraph_converter.py landscape.png -o landscape.svg -l 8 -a 20
 Create an organic, hand-drawn style output:
 ```bash
 python polargraph_converter.py sketch.png -o sketch.svg -l 5 -a 15 --organic
-```
-
-Run the demo script to see various output styles:
-```bash
-python demo.py
 ```
 
 This will generate several example SVGs showing different parameter combinations and the collision prevention system in action.
