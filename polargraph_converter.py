@@ -175,13 +175,16 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=
     total_lines = 0
     
     # Generate horizontal lines
-    for y in range(0, height, line_spacing):
+    # Use floating point arithmetic for line_spacing, convert to int for pixel access
+    y = 0
+    while y < height:
         total_lines += 1
+        y_int = int(y)
         
         # Get pixel darkness values for this row
         darkness_values = []
         for x in range(width):
-            pixel_value = grayscale_img.getpixel((x, y))
+            pixel_value = grayscale_img.getpixel((x, y_int))
             darkness = get_pixel_darkness(pixel_value)
             darkness_values.append(darkness)
         
@@ -202,6 +205,9 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=
         
         # Store current line for next iteration
         prev_line_points = points
+        
+        # Move to next line
+        y += line_spacing
     
     # Close SVG tags
     svg_lines.extend([
@@ -293,7 +299,7 @@ Examples:
     print("Generating SVG...")
     generate_svg(
         grayscale_img,
-        line_spacing=int(args.line_spacing),
+        line_spacing=args.line_spacing,
         amplitude_scale=args.amplitude_scale,
         output_path=args.output
     )
