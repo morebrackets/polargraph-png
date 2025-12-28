@@ -178,7 +178,8 @@ def adjust_segments_for_clearance(curr_segments, prev_segments, min_clearance=1.
 
 def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, output_path=None):
     """
-    Generate SVG from grayscale image with continuous horizontal paths.
+    Generate SVG from grayscale image with segmented horizontal paths.
+    Only generates lines where content exists (skips white/light background).
     Automatically adjusts spacing to prevent line collisions.
     
     Args:
