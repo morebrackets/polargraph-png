@@ -232,7 +232,7 @@ def generate_svg(grayscale_img, line_spacing=5, amplitude_scale=10, organic=Fals
     svg_lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_width}" height="{svg_height}" viewBox="0 0 {svg_width} {svg_height}">',
-        f'  <desc>Polargraph SVG - Generated from image{"with organic style" if organic else " with collision prevention"}</desc>',
+        f'  <desc>Polargraph SVG - Generated from image{" with organic style" if organic else " with collision prevention"}</desc>',
         '  <g fill="none" stroke="black" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round">'
     ]
     
